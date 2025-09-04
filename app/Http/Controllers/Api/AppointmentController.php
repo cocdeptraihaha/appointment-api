@@ -97,17 +97,6 @@ class AppointmentController extends Controller
     {
         $appointment = Appointment::findOrFail($id);
 
-        $request->validate([
-            'title' => 'sometimes|required|string|max:200',
-            'type_id' => 'nullable|string|exists:appointment_types,id',
-            'contact_id' => 'nullable|string|exists:contacts,id',
-            'staff_id' => 'nullable|string|exists:staff,id',
-            'start_time' => 'sometimes|required|integer',
-            'end_time' => 'sometimes|required|integer|gt:start_time',
-            'service_ids' => 'nullable|array',
-            'service_ids.*' => 'string|exists:services,id'
-        ]);
-
         $appointment->update($request->only([
             'title', 'type_id', 'contact_id', 'staff_id', 'start_time', 'end_time'
         ]));
