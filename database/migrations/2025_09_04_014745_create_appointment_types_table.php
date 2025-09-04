@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('color', 7)->nullable();
             $table->timestamp('deleted_at')->nullable();
             $table->timestamps();
-            
             $table->index('deleted_at');
         });
     }
