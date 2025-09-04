@@ -33,12 +33,21 @@ COPY . /var/www/html
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader
 
+# Create basic .env file
+RUN echo "APP_NAME=\"Appointment API\"" > .env && \
+    echo "APP_ENV=production" >> .env && \
+    echo "APP_KEY=" >> .env && \
+    echo "APP_DEBUG=false" >> .env && \
+    echo "APP_URL=https://your-app.onrender.com" >> .env && \
+    echo "DB_CONNECTION=pgsql" >> .env && \
+    echo "DB_HOST=127.0.0.1" >> .env && \
+    echo "DB_PORT=5432" >> .env && \
+    echo "DB_DATABASE=appointment_db" >> .env && \
+    echo "DB_USERNAME=appointment_user" >> .env && \
+    echo "DB_PASSWORD=" >> .env
+
 # Generate application key
 RUN php artisan key:generate --force
-
-# Run migrations and seed
-RUN php artisan migrate --force
-RUN php artisan db:seed --force
 
 # Clear and cache config
 RUN php artisan config:clear
