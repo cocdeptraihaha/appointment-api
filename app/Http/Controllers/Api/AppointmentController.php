@@ -97,9 +97,16 @@ class AppointmentController extends Controller
     {
         $appointment = Appointment::findOrFail($id);
 
-        $appointment->update($request->only([
-            'title', 'type_id', 'contact_id', 'staff_id', 'start_time', 'end_time'
-        ]));
+        // Map start/end from React to start_time/end_time if provided
+        $payload = $request->only(['title', 'type_id', 'contact_id', 'staff_id', 'start_time', 'end_time']);
+        if ($request->has('start')) {
+            $payload['start_time'] = $request->start;
+        }
+        if ($request->has('end')) {
+            $payload['end_time'] = $request->end;
+        }
+
+        $appointment->update($payload);
 
         // Update services if provided
         if ($request->has('service_ids')) {
