@@ -1,0 +1,25 @@
+runtime: php82
+
+# Document root phải là public folder
+entrypoint: serve public/index.php
+
+env_variables:
+  APP_ENV: production
+  APP_DEBUG: false
+  APP_KEY: "base64:yrlCQNgVvrsvjhLGGndlm73vd1sHKp+qgB8Ey8jNbkU"
+  APP_STORAGE: "/tmp"
+  CACHE_DRIVER: file
+  SESSION_DRIVER: cookie
+  VIEW_COMPILED_PATH: "/tmp"
+  LOG_CHANNEL: "stderr"
+  APP_URL: "https://ancient-timing-471202-j0.appspot.com"
+
+  DB_CONNECTION: mysql
+  DB_HOST: "/cloudsql/ancient-timing-471202-j0:asia-southeast1:appointment-db"
+  DB_DATABASE: "appointment-db"
+  DB_USERNAME: "root"
+  DB_PASSWORD: "root"
+
+handlers:
+  - url: /.*
+    script: public/index.php
