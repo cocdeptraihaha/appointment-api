@@ -84,14 +84,6 @@ class AppointmentTypeController extends Controller
     public function destroy(string $id): JsonResponse
     {
         $appointmentType = AppointmentType::findOrFail($id);
-        
-        // Check if appointment type has appointments
-        if ($appointmentType->appointments()->count() > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot delete appointment type with existing appointments'
-            ], 422);
-        }
 
         $appointmentType->delete(); // Soft delete
 
