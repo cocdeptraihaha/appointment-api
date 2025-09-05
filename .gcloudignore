@@ -2,16 +2,49 @@
 # using gcloud. It follows the same syntax as .gitignore, with the addition of
 # "#!include" directives (which insert the entries of the given .gitignore-style
 # file at that point).
-#
-# For more information, run:
-#   $ gcloud topic gcloudignore
-#
-.gcloudignore
-# If you would like to upload your .git directory, .gitignore file or files
-# from your .gitignore file, remove the corresponding line
-# below:
-.git
-.gitignore
 
-# PHP Composer dependencies:
-/vendor/
+#!include:.gitignore
+
+# Node.js dependencies:
+node_modules/
+
+# Development files
+.env
+.env.local
+.env.example
+.env.testing
+.env.heroku
+.env.gcloud
+
+# Logs
+storage/logs/*
+*.log
+
+# Cache
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files (not needed for Cloud Run)
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Test files
+tests/
+phpunit.xml
+
+# Documentation
+README.md
+SRS.md

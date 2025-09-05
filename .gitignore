@@ -24,3 +24,11 @@ Homestead.yaml
 Thumbs.db
 
 .vercel
+
+# Deployment configs (exclude from GitHub)
+Dockerfile.cloudrun
+cloudbuild.yaml
+deploy.sh
+deploy.bat
+.gcloudignore
+

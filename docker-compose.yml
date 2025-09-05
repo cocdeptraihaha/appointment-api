@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:80"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_CONNECTION=mysql
+      - DB_HOST=35.198.220.8
+      - DB_PORT=3306
+      - DB_DATABASE=appointment-db
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./.env:/var/www/html/.env
+    networks:
+      - laravel-network
+
+networks:
+  laravel-network:
+    driver: bridge
