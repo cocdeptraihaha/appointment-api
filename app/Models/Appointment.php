@@ -50,7 +50,7 @@ class Appointment extends Model
 
 	public function appointment_type()
 	{
-		return $this->belongsTo(AppointmentType::class, 'type_id');
+		return $this->belongsTo(AppointmentType::class, 'type_id')->withTrashed();
 	}
 
 	public function contact()
