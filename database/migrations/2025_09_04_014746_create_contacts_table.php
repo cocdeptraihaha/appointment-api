@@ -14,7 +14,10 @@ return new class extends Migration
         Schema::create('contacts', function (Blueprint $table) {
             $table->string('id', 10)->primary();
             $table->text('avatar')->nullable();
-            $table->string('name', 100);
+            $table->string('first_name', 100);
+            $table->string('last_name', 100)->nullable();
+            $table->string('email', 200)->nullable();
+            $table->string('phone_number', 50)->nullable();
         });
     }
 

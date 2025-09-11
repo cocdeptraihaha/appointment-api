@@ -14,7 +14,10 @@ use Illuminate\Database\Eloquent\Model;
  * 
  * @property string $id
  * @property string|null $avatar
- * @property string $name
+ * @property string $first_name
+ * @property string|null $last_name
+ * @property string|null $email
+ * @property string|null $phone_number
  * 
  * @property Collection|Appointment[] $appointments
  *
@@ -29,7 +32,10 @@ class Contact extends Model
 	protected $fillable = [
 		'id',
 		'avatar',
-		'name'
+		'first_name',
+		'last_name',
+		'email',
+		'phone_number'
 	];
 
 	public function appointments()

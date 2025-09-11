@@ -23,14 +23,14 @@ class AppointmentSeeder extends Seeder
             ['id' => '43fd', 'label' => 'Date', 'color' => '#fec3f3', 'deleted_at' => '2025-08-28 09:33:14'],
         ]);
 
-        // Insert contacts data
+        // Insert contacts data (new schema)
         DB::table('contacts')->insert([
-            ['id' => '1', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'name' => 'Julie at PilotPractice'],
-            ['id' => '2', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'name' => 'Yari Maldonado'],
-            ['id' => '3', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'name' => 'IL Rockford'],
-            ['id' => '4', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'name' => 'Unknown'],
-            ['id' => '5', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'name' => 'Reza Keshavarzi'],
-            ['id' => '6', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'name' => 'Unknown'],
+            ['id' => '1', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'first_name' => 'Julie', 'last_name' => 'PilotPractice', 'email' => 'julie@example.com', 'phone_number' => '+1 555-200-0001'],
+            ['id' => '2', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'first_name' => 'Yari', 'last_name' => 'Maldonado', 'email' => 'yari@example.com', 'phone_number' => '+1 555-200-0002'],
+            ['id' => '3', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'first_name' => 'IL', 'last_name' => 'Rockford', 'email' => 'il.rockford@example.com', 'phone_number' => '+1 555-200-0003'],
+            ['id' => '4', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'first_name' => 'Unknown', 'last_name' => null, 'email' => null, 'phone_number' => null],
+            ['id' => '5', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'first_name' => 'Reza', 'last_name' => 'Keshavarzi', 'email' => 'reza@example.com', 'phone_number' => '+1 555-200-0005'],
+            ['id' => '6', 'avatar' => 'https://www.w3schools.com/w3images/avatar2.png', 'first_name' => 'Unknown', 'last_name' => null, 'email' => null, 'phone_number' => null],
         ]);
 
         // Insert services data
@@ -117,9 +117,6 @@ class AppointmentSeeder extends Seeder
             ['staff_id' => '9', 'service_id' => '6'], ['staff_id' => '9', 'service_id' => '4'],
         ]);
 
-        // Insert settings data
-        DB::table('settings')->insert([
-            ['setting_key' => 'visibleContacts', 'setting_value' => '["1", "2", "3", "4", "5", "6"]'],
-        ]);
+        // Settings table removed; settings are derived dynamically
     }
 }

@@ -16,7 +16,12 @@ class ContactResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            // Keep legacy field "name" for backward compatibility
+            'name' => trim(implode(' ', array_filter([$this->first_name, $this->last_name]))),
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
+            'email' => $this->email,
+            'phone_number' => $this->phone_number,
             'avatar' => $this->avatar,
             'appointments_count' => $this->when(isset($this->appointments_count), $this->appointments_count),
             'appointments' => AppointmentResource::collection($this->whenLoaded('appointments')),

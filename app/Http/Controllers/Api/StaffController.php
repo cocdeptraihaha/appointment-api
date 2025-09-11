@@ -33,15 +33,24 @@ class StaffController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'avatar' => ['nullable', 'string'],
+            'visible' => ['sometimes', 'in:0,1'],
+            'service_ids' => ['sometimes', 'array'],
+            'service_ids.*' => ['string', 'size:10', 'exists:services,id'],
+        ]);
+
         $staff = Staff::create([
             'id' => Str::random(10),
-            'name' => $request->name,
-            'avatar' => $request->avatar,
+            'name' => $validated['name'],
+            'avatar' => $validated['avatar'] ?? null,
+            'visible' => array_key_exists('visible', $validated) ? (int) $validated['visible'] : 1,
         ]);
 
         // Attach services if provided
-        if ($request->has('service_ids')) {
-            $staff->services()->attach($request->service_ids);
+        if (array_key_exists('service_ids', $validated)) {
+            $staff->services()->attach($validated['service_ids']);
         }
 
         $staff->load('services');
@@ -67,11 +76,23 @@ class StaffController extends Controller
     {
         $staff = Staff::findOrFail($id);
 
-        $staff->update($request->only(['name', 'avatar']));
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:100'],
+            'avatar' => ['sometimes', 'nullable', 'string'],
+            'visible' => ['sometimes', 'in:0,1'],
+            'service_ids' => ['sometimes', 'array'],
+            'service_ids.*' => ['string', 'size:10', 'exists:services,id'],
+        ]);
+
+        if (array_key_exists('visible', $validated)) {
+            $validated['visible'] = (int) $validated['visible'];
+        }
+
+        $staff->update($validated);
 
         // Update services if provided
-        if ($request->has('service_ids')) {
-            $staff->services()->sync($request->service_ids);
+        if (array_key_exists('service_ids', $validated)) {
+            $staff->services()->sync($validated['service_ids']);
         }
 
         $staff->load('services');

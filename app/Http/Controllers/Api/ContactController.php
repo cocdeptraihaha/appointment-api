@@ -18,14 +18,46 @@ class ContactController extends Controller
     {
         $query = Contact::withCount('appointments');
 
-        // Search by name
+        // Search by first/last name, email, or phone number
         if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', '%' . $search . '%')
+                  ->orWhere('last_name', 'like', '%' . $search . '%')
+                  ->orWhere('email', 'like', '%' . $search . '%')
+                  ->orWhere('phone_number', 'like', '%' . $search . '%');
+            });
         }
 
-        $contacts = $query->orderBy('name')->get();
+        // Return full list (no pagination)
+        $contacts = $query->orderBy('first_name')->orderBy('last_name')->get();
 
         return response()->json(ContactResource::collection($contacts));
+    }
+
+    /**
+     * Paginated listing of contacts (25 per page).
+     */
+    public function paginated(Request $request): JsonResponse
+    {
+        $query = Contact::withCount('appointments');
+
+        // Search by first/last name, email, or phone number
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', '%' . $search . '%')
+                  ->orWhere('last_name', 'like', '%' . $search . '%')
+                  ->orWhere('email', 'like', '%' . $search . '%')
+                  ->orWhere('phone_number', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Fixed page size: 25 results per page
+        $contacts = $query->orderBy('first_name')->orderBy('last_name')->paginate(25);
+
+        // Return paginator with meta & links preserved
+        return ContactResource::collection($contacts)->response();
     }
 
     /**
@@ -33,10 +65,21 @@ class ContactController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['nullable', 'string', 'max:100'],
+            'email' => ['nullable', 'string', 'max:200', 'email'],
+            'phone_number' => ['nullable', 'string', 'max:50'],
+            'avatar' => ['nullable', 'string'],
+        ]);
+
         $contact = Contact::create([
             'id' => Str::random(10),
-            'name' => $request->name,
-            'avatar' => $request->avatar,
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'phone_number' => $validated['phone_number'] ?? null,
+            'avatar' => $validated['avatar'] ?? null,
         ]);
 
         return response()->json(new ContactResource($contact), 201);
@@ -60,7 +103,15 @@ class ContactController extends Controller
     {
         $contact = Contact::findOrFail($id);
 
-        $contact->update($request->only(['name', 'avatar']));
+        $validated = $request->validate([
+            'first_name' => ['sometimes', 'required', 'string', 'max:100'],
+            'last_name' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'email' => ['sometimes', 'nullable', 'string', 'max:200', 'email'],
+            'phone_number' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'avatar' => ['sometimes', 'nullable', 'string'],
+        ]);
+
+        $contact->update($validated);
 
         return response()->json(new ContactResource($contact));
     }

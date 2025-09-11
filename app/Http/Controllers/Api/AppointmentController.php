@@ -16,7 +16,7 @@ class AppointmentController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Appointment::with(['services']);
+        $query = Appointment::with(['services', 'contact']);
 
         // Filter by date range
         if ($request->has('start_date') && $request->has('end_date')) {
@@ -55,22 +55,35 @@ class AppointmentController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:200'],
+            'type_id' => ['nullable', 'string', 'size:10', 'exists:appointment_types,id'],
+            'contact_id' => ['nullable', 'string', 'size:10', 'exists:contacts,id'],
+            'staff_id' => ['nullable', 'string', 'size:10', 'exists:staff,id'],
+            'start' => ['sometimes', 'integer'],
+            'end' => ['sometimes', 'integer'],
+            'start_time' => ['sometimes', 'integer'],
+            'end_time' => ['sometimes', 'integer'],
+            'service_ids' => ['sometimes', 'array'],
+            'service_ids.*' => ['string', 'size:10', 'exists:services,id'],
+        ]);
+
         // Use start/end from React app, fallback to start_time/end_time
-        $startTime = $request->start ?? $request->start_time;
-        $endTime = $request->end ?? $request->end_time;
+        $startTime = $validated['start'] ?? $validated['start_time'] ?? null;
+        $endTime = $validated['end'] ?? $validated['end_time'] ?? null;
 
         $appointment = Appointment::create([
             'id' => Str::random(10),
-            'title' => $request->title,
-            'type_id' => $request->type_id,
-            'contact_id' => $request->contact_id,
-            'staff_id' => $request->staff_id,
+            'title' => $validated['title'],
+            'type_id' => $validated['type_id'] ?? null,
+            'contact_id' => $validated['contact_id'] ?? null,
+            'staff_id' => $validated['staff_id'] ?? null,
             'start_time' => $startTime,
             'end_time' => $endTime,
         ]);
 
         // Attach services if provided (snake_case only)
-        $serviceIds = $request->input('service_ids', []);
+        $serviceIds = $validated['service_ids'] ?? [];
         if (is_string($serviceIds)) {
             $serviceIds = array_filter(array_map('trim', preg_split('/[\s,]+/', $serviceIds)));
         }
@@ -79,7 +92,7 @@ class AppointmentController extends Controller
             $appointment->services()->sync($serviceIds, false);
         }
 
-        $appointment->load(['services']);
+        $appointment->load(['services', 'contact']);
 
         return response()->json(new AppointmentResource($appointment), 201);
     }
@@ -87,10 +100,9 @@ class AppointmentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Appointment $appointment): JsonResponse
+    public function show(string $id): JsonResponse
     {
-        $appointment = Appointment::with(['services'])
-            ->findOrFail($id);
+        $appointment = Appointment::with(['services', 'contact'])->findOrFail($id);
 
         return response()->json(new AppointmentResource($appointment));
     }
@@ -102,21 +114,39 @@ class AppointmentController extends Controller
     {
         $appointment = Appointment::findOrFail($id);
 
+        $validated = $request->validate([
+            'title' => ['sometimes', 'string', 'max:200'],
+            'type_id' => ['sometimes', 'nullable', 'string', 'size:10', 'exists:appointment_types,id'],
+            'contact_id' => ['sometimes', 'nullable', 'string', 'size:10', 'exists:contacts,id'],
+            'staff_id' => ['sometimes', 'nullable', 'string', 'size:10', 'exists:staff,id'],
+            'start' => ['sometimes', 'integer'],
+            'end' => ['sometimes', 'integer'],
+            'start_time' => ['sometimes', 'integer'],
+            'end_time' => ['sometimes', 'integer'],
+            'service_ids' => ['sometimes', 'array'],
+            'service_ids.*' => ['string', 'size:10', 'exists:services,id'],
+        ]);
+
         // Map start/end from React to start_time/end_time if provided
-        $payload = $request->only(['title', 'type_id', 'contact_id', 'staff_id', 'start_time', 'end_time']);
-        if ($request->has('start')) {
-            $payload['start_time'] = $request->start;
+        $payload = [];
+        foreach (['title','type_id','contact_id','staff_id','start_time','end_time'] as $field) {
+            if (array_key_exists($field, $validated)) {
+                $payload[$field] = $validated[$field];
+            }
         }
-        if ($request->has('end')) {
-            $payload['end_time'] = $request->end;
+        if (array_key_exists('start', $validated)) {
+            $payload['start_time'] = $validated['start'];
+        }
+        if (array_key_exists('end', $validated)) {
+            $payload['end_time'] = $validated['end'];
         }
 
         $appointment->update($payload);
 
         // Update services if provided (snake_case only)
-        if ($request->has('service_ids')) {
-            $serviceIds = $request->input('service_ids', []);
-            if (is_string($serviceIds)) {
+        if (array_key_exists('service_ids', $validated)) {
+            $serviceIds = $validated['service_ids'] ?? [];
+            if (is_string($serviceIds)) { // safety if client sends string
                 $serviceIds = array_filter(array_map('trim', preg_split('/[\s,]+/', $serviceIds)));
             }
             $appointment->services()->sync($serviceIds ?? []);
