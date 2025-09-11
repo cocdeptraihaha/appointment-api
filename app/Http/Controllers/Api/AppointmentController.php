@@ -69,9 +69,14 @@ class AppointmentController extends Controller
             'end_time' => $endTime,
         ]);
 
-        // Attach services if provided
-        if ($request->has('service_ids')) {
-            $appointment->services()->attach($request->service_ids);
+        // Attach services if provided (snake_case only)
+        $serviceIds = $request->input('service_ids', []);
+        if (is_string($serviceIds)) {
+            $serviceIds = array_filter(array_map('trim', preg_split('/[\s,]+/', $serviceIds)));
+        }
+        if (!empty($serviceIds)) {
+            // sync without detaching existing (should be none on create), safer for duplicates
+            $appointment->services()->sync($serviceIds, false);
         }
 
         $appointment->load(['services']);
@@ -82,7 +87,7 @@ class AppointmentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id): JsonResponse
+    public function show(Appointment $appointment): JsonResponse
     {
         $appointment = Appointment::with(['services'])
             ->findOrFail($id);
@@ -108,9 +113,13 @@ class AppointmentController extends Controller
 
         $appointment->update($payload);
 
-        // Update services if provided
+        // Update services if provided (snake_case only)
         if ($request->has('service_ids')) {
-            $appointment->services()->sync($request->service_ids);
+            $serviceIds = $request->input('service_ids', []);
+            if (is_string($serviceIds)) {
+                $serviceIds = array_filter(array_map('trim', preg_split('/[\s,]+/', $serviceIds)));
+            }
+            $appointment->services()->sync($serviceIds ?? []);
         }
 
         $appointment->load(['services']);

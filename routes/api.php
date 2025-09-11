@@ -86,4 +86,3 @@ Route::get('data', function () {
         'settings' => $settings,
     ]);
 });
-

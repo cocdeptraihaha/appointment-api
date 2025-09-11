@@ -21,6 +21,7 @@ class StaffResource extends JsonResource
             'service_ids' => $this->whenLoaded('services', function () {
                 return $this->services->pluck('id')->toArray();
             }),
+            'visible' => $this->visible,
         ];
     }
 }

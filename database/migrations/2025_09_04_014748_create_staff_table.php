@@ -15,6 +15,7 @@ return new class extends Migration
             $table->string('id', 10)->primary();
             $table->text('avatar')->nullable();
             $table->string('name', 100);
+            $table->boolean('visible')->default(true);
         });
     }
 

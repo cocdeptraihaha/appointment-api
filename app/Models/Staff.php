@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $id
  * @property string|null $avatar
  * @property string $name
+ * @property bool $visible
  * 
  * @property Collection|Appointment[] $appointments
  * @property Collection|Service[] $services
@@ -30,7 +31,8 @@ class Staff extends Model
 	protected $fillable = [
 		'id',
 		'avatar',
-		'name'
+		'name',
+		'visible'
 	];
 
 	public function appointments()
