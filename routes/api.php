@@ -27,9 +27,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // Appointment Routves
 Route::apiResource('appointments', AppointmentController::class);
 
-// Contact Routes: full list and paginated list
-Route::get('contacts', [ContactController::class, 'index']);
+// Contact Routes: full CRUD operations
 Route::get('contacts/paginated', [ContactController::class, 'paginated']);
+Route::apiResource('contacts', ContactController::class);
 
 // Service Routes (FE only needs GET list)
 Route::get('services', [ServiceController::class, 'index']);

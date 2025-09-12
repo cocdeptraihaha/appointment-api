@@ -29,8 +29,8 @@ class ContactController extends Controller
             });
         }
 
-        // Return full list (no pagination)
-        $contacts = $query->orderBy('first_name')->orderBy('last_name')->get();
+        // Return limited results (5 items max)
+        $contacts = $query->orderBy('first_name')->orderBy('last_name')->limit(5)->get();
 
         return response()->json(ContactResource::collection($contacts));
     }
@@ -69,7 +69,7 @@ class ContactController extends Controller
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['nullable', 'string', 'max:100'],
             'email' => ['nullable', 'string', 'max:200', 'email'],
-            'phone_number' => ['nullable', 'string', 'max:50'],
+            'phone_number' => ['required', 'regex:/^\+?[1-9][0-9]{7,14}$/'],
             'avatar' => ['nullable', 'string'],
         ]);
 
@@ -107,7 +107,7 @@ class ContactController extends Controller
             'first_name' => ['sometimes', 'required', 'string', 'max:100'],
             'last_name' => ['sometimes', 'nullable', 'string', 'max:100'],
             'email' => ['sometimes', 'nullable', 'string', 'max:200', 'email'],
-            'phone_number' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'phone_number' => ['required', 'regex:/^\+?[1-9][0-9]{7,14}$/'],
             'avatar' => ['sometimes', 'nullable', 'string'],
         ]);
 

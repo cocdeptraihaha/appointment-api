@@ -16,7 +16,12 @@ class AppointmentController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Appointment::with(['services', 'contact']);
+        $query = Appointment::with([
+            'appointment_type',
+            'contact', 
+            'staff',
+            'services'
+        ]);
 
         // Filter by date range
         if ($request->has('start_date') && $request->has('end_date')) {
@@ -57,15 +62,15 @@ class AppointmentController extends Controller
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:200'],
-            'type_id' => ['nullable', 'string', 'size:10', 'exists:appointment_types,id'],
-            'contact_id' => ['nullable', 'string', 'size:10', 'exists:contacts,id'],
-            'staff_id' => ['nullable', 'string', 'size:10', 'exists:staff,id'],
+            'type_id' => ['nullable', 'string', 'exists:appointment_types,id'],
+            'contact_id' => ['nullable', 'string', 'exists:contacts,id'],
+            'staff_id' => ['nullable', 'string', 'exists:staff,id'],
             'start' => ['sometimes', 'integer'],
             'end' => ['sometimes', 'integer'],
             'start_time' => ['sometimes', 'integer'],
             'end_time' => ['sometimes', 'integer'],
             'service_ids' => ['sometimes', 'array'],
-            'service_ids.*' => ['string', 'size:10', 'exists:services,id'],
+            'service_ids.*' => ['string', 'exists:services,id'],
         ]);
 
         // Use start/end from React app, fallback to start_time/end_time
@@ -92,7 +97,7 @@ class AppointmentController extends Controller
             $appointment->services()->sync($serviceIds, false);
         }
 
-        $appointment->load(['services', 'contact']);
+        $appointment->load(['appointment_type', 'contact', 'staff', 'services']);
 
         return response()->json(new AppointmentResource($appointment), 201);
     }
@@ -102,7 +107,12 @@ class AppointmentController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        $appointment = Appointment::with(['services', 'contact'])->findOrFail($id);
+        $appointment = Appointment::with([
+            'appointment_type',
+            'contact', 
+            'staff',
+            'services'
+        ])->findOrFail($id);
 
         return response()->json(new AppointmentResource($appointment));
     }
@@ -116,15 +126,15 @@ class AppointmentController extends Controller
 
         $validated = $request->validate([
             'title' => ['sometimes', 'string', 'max:200'],
-            'type_id' => ['sometimes', 'nullable', 'string', 'size:10', 'exists:appointment_types,id'],
-            'contact_id' => ['sometimes', 'nullable', 'string', 'size:10', 'exists:contacts,id'],
-            'staff_id' => ['sometimes', 'nullable', 'string', 'size:10', 'exists:staff,id'],
+            'type_id' => ['sometimes', 'nullable', 'string', 'exists:appointment_types,id'],
+            'contact_id' => ['sometimes', 'nullable', 'string', 'exists:contacts,id'],
+            'staff_id' => ['sometimes', 'nullable', 'string', 'exists:staff,id'],
             'start' => ['sometimes', 'integer'],
             'end' => ['sometimes', 'integer'],
             'start_time' => ['sometimes', 'integer'],
             'end_time' => ['sometimes', 'integer'],
             'service_ids' => ['sometimes', 'array'],
-            'service_ids.*' => ['string', 'size:10', 'exists:services,id'],
+            'service_ids.*' => ['string', 'exists:services,id'],
         ]);
 
         // Map start/end from React to start_time/end_time if provided
@@ -152,7 +162,7 @@ class AppointmentController extends Controller
             $appointment->services()->sync($serviceIds ?? []);
         }
 
-        $appointment->load(['services']);
+        $appointment->load(['appointment_type', 'contact', 'staff', 'services']);
 
         return response()->json(new AppointmentResource($appointment));
     }

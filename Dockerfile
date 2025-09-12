@@ -62,5 +62,9 @@ RUN echo '<VirtualHost *:80>\n\
 # Expose port 80
 EXPOSE 80
 
-# Start Apache
-CMD ["apache2-foreground"]
+# Copy entrypoint and make it executable
+COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Start via entrypoint (Render will respect PORT=10000 but Apache listens on 80 internally)
+CMD ["/usr/local/bin/docker-entrypoint.sh"]
