@@ -23,7 +23,6 @@ class ContactResource extends JsonResource
             'email' => $this->email,
             'phone_number' => $this->phone_number,
             'avatar' => $this->avatar,
-            'appointments' => AppointmentResource::collection($this->whenLoaded('appointments')),
         ];
     }
 }

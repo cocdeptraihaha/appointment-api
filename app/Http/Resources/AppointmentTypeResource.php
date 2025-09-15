@@ -19,7 +19,6 @@ class AppointmentTypeResource extends JsonResource
             'label' => $this->label,
             'color' => $this->color,
             'deleted_at' => $this->deleted_at,
-            'appointments' => AppointmentResource::collection($this->whenLoaded('appointments')),
         ];
     }
 }
