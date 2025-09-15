@@ -19,8 +19,9 @@ Route::apiResource('appointments', AppointmentController::class);
 
 Route::apiResource('appointment_types', AppointmentTypeController::class);
 
-Route::apiResource('contacts', ContactController::class);
+// Contact routes - specific routes must come before apiResource
 Route::get('contacts/paginated', [ContactController::class, 'paginated']);
+Route::apiResource('contacts', ContactController::class);
 
 Route::get('services', [ServiceController::class, 'index']);
 

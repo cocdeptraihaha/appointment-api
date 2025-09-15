@@ -11,9 +11,6 @@ use Illuminate\Support\Str;
 
 class StaffController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request): JsonResponse
     {
         $query = Staff::with(['services']);
