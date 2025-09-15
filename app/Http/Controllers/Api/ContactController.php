@@ -51,7 +51,8 @@ class ContactController extends Controller
                 $q->where('first_name', 'like', '%' . $search . '%')
                   ->orWhere('last_name', 'like', '%' . $search . '%')
                   ->orWhere('email', 'like', '%' . $search . '%')
-                  ->orWhere('phone_number', 'like', '%' . $search . '%');
+                  ->orWhere('phone_number', 'like', '%' . $search . '%')
+                  ->orWhere(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', '%' . $search . '%');
             });
         }
 
@@ -68,11 +69,11 @@ class ContactController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'first_name' => ['required','required', 'string', 'max:100'],
-            'last_name' => ['required','string', 'max:100'],
-            'email' => ['required', 'string', 'max:200', 'email'],
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['nullable', 'string', 'max:100'],
+            'email' => ['nullable', 'string', 'max:200', 'email'],
             'phone_number' => ['required', 'regex:/^\+?[1-9][0-9]{7,14}$/'],
-            'avatar' => [ 'string'],
+            'avatar' => ['nullable', 'string'],
         ]);
 
         $contact = Contact::create([

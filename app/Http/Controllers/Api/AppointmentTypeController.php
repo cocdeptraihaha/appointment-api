@@ -16,7 +16,7 @@ class AppointmentTypeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = AppointmentType::withCount('appointments');
+        $query = AppointmentType::query();
 
         // Filter by deleted status
         if ($request->has('include_deleted') && $request->include_deleted) {

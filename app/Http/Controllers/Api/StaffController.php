@@ -15,11 +15,10 @@ class StaffController extends Controller
     {
         $query = Staff::with(['services']);
 
-        // Search by name
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
-
+        
         $staff = $query->orderBy('name')->get();
 
         return response()->json(StaffResource::collection($staff));
