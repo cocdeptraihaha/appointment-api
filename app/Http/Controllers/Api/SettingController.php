@@ -25,22 +25,4 @@ class SettingController extends Controller
             'visibleStaffs' => $visibleStaffIds,
         ]);
     }
-
-    // Removed unused CRUD and key-based endpoints; FE only uses index + bulkUpdate
-
-    /**
-     * Bulk update settings for React compatibility
-     */
-    public function bulkUpdate(Request $request): JsonResponse
-    {
-        // Do not persist settings; derive from live data and return in expected shape
-        $visibleStaffIds = Staff::where('visible', true)
-            ->orderBy('name')
-            ->pluck('id')
-            ->values();
-
-        return response()->json([
-            'visibleStaffs' => $visibleStaffIds,
-        ]);
-    }
 }

@@ -22,7 +22,6 @@ class ServiceController extends Controller
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
-
         $services = $query->orderBy('name')->get();
 
         return response()->json(ServiceResource::collection($services));
