@@ -1,333 +1,523 @@
-## Software Requirement Specification (SRS)
+# Software Requirements Specification (SRS)
 
-### Appointment Management System API
-Version: 1.0  
-Date: September 2025  
-Author: Development Team
+## Hệ thống Quản lý Lịch hẹn (Appointment Management System)
 
----
+### 1. Tổng quan hệ thống
 
-## 1. Introduction
+#### 1.1 Mục đích
 
-### 1.1 Purpose
-Tài liệu mô tả chi tiết yêu cầu chức năng và phi chức năng của hệ thống API quản lý lịch hẹn (Appointment Management System) xây dựng bằng Laravel, phục vụ React frontend.
+Hệ thống quản lý lịch hẹn là một API RESTful được xây dựng bằng Laravel, cung cấp các chức năng quản lý lịch hẹn, khách hàng, nhân viên, dịch vụ và loại lịch hẹn.
 
-### 1.2 Scope
-Hệ thống cung cấp API để quản lý: appointments, contacts, staff, services, appointment types, settings; hỗ trợ tìm kiếm, lọc, soft delete, tối ưu phản hồi cho frontend.
+#### 1.2 Phạm vi
 
-### 1.3 Definitions & Abbreviations
-- API: Application Programming Interface
-- CRUD: Create, Read, Update, Delete
-- REST: Representational State Transfer
-- CORS: Cross-Origin Resource Sharing
-- ORM: Object-Relational Mapping
-- SRS: Software Requirement Specification
+-   Quản lý lịch hẹn với đầy đủ CRUD operations
+-   Quản lý thông tin khách hàng (contacts)
+-   Quản lý thông tin nhân viên (staff)
+-   Quản lý dịch vụ (services)
+-   Quản lý loại lịch hẹn (appointment types)
+-   Quản lý cài đặt hệ thống (settings)
 
----
+#### 1.3 Kiến trúc hệ thống
 
-## 2. Overall Description
+-   **Backend**: Laravel 11.x với PHP 8.2+
+-   **Database**: MySQL/PostgreSQL
+-   **API**: RESTful API với JSON responses
+-   **Authentication**: Laravel Sanctum (tùy chọn)
 
-### 2.1 Product Perspective
+### 2. Cấu trúc dữ liệu
 
-Client (React) ⇄ HTTP/JSON ⇄ Laravel API ⇄ MySQL Database
+#### 2.1 Bảng Appointments
 
-### 2.2 Product Functions
-1) Quản lý lịch hẹn (appointments)
-2) Quản lý khách hàng (contacts)
-3) Quản lý nhân viên (staff)
-4) Quản lý dịch vụ (services)
-5) Quản lý loại lịch hẹn (appointment types) + Soft delete/restore
-6) Quản lý cài đặt (settings) + Bulk update
-7) Tìm kiếm và lọc
-8) Endpoint tổng hợp dữ liệu (combined data)
+-   `id` (string, 10): Khóa chính
+-   `title` (string, 200): Tiêu đề lịch hẹn
+-   `type_id` (string, 10): ID loại lịch hẹn (foreign key)
+-   `contact_id` (string, 10): ID khách hàng (foreign key)
+-   `staff_id` (string, 10): ID nhân viên (foreign key)
+-   `start_time` (bigint): Thời gian bắt đầu (timestamp)
+-   `end_time` (bigint): Thời gian kết thúc (timestamp)
 
----
+#### 2.2 Bảng Appointment Types
 
-## 3. Specific Requirements
+-   `id` (string, 10): Khóa chính
+-   `label` (string, 100): Tên loại lịch hẹn
+-   `color` (string, 7): Màu sắc (hex code)
+-   `deleted_at` (timestamp): Soft delete
+-   `created_at`, `updated_at` (timestamp): Timestamps
 
-### 3.1 Functional Requirements
+#### 2.3 Bảng Contacts
 
-#### 3.1.1 Appointment Management
+-   `id` (string, 10): Khóa chính
+-   `avatar` (text): URL ảnh đại diện
+-   `first_name` (string, 100): Tên
+-   `last_name` (string, 100): Họ
+-   `email` (string, 200): Email
+-   `phone_number` (string, 50): Số điện thoại
 
-- FR-001 Create Appointment  
-Endpoint: POST `/api/appointments`  
-Input: `title, type_id, contact_id, staff_id, start|start_time, end|end_time, service_ids[]`  
-Output: 201 + Appointment object (JSON)
+#### 2.4 Bảng Staff
 
-```php
-// app/Http/Controllers/Api/AppointmentController.php (trích yếu)
-public function store(Request $request): JsonResponse
-{
-    $startTime = $request->start ?? $request->start_time;
-    $endTime = $request->end ?? $request->end_time;
+-   `id` (string, 10): Khóa chính
+-   `avatar` (text): URL ảnh đại diện
+-   `name` (string, 100): Tên nhân viên
+-   `visible` (boolean): Hiển thị trong lịch
 
-    $appointment = Appointment::create([
-        'id' => Str::random(10),
-        'title' => $request->title,
-        'type_id' => $request->type_id,
-        'contact_id' => $request->contact_id,
-        'staff_id' => $request->staff_id,
-        'start_time' => $startTime,
-        'end_time' => $endTime,
-    ]);
+#### 2.5 Bảng Services
 
-    if ($request->has('service_ids')) {
-        $appointment->services()->attach($request->service_ids);
-    }
+-   `id` (string, 10): Khóa chính
+-   `name` (string, 200): Tên dịch vụ
 
-    $appointment->load(['services']);
-    return response()->json(new AppointmentResource($appointment), 201);
-}
-```
+#### 2.6 Bảng quan hệ
 
-- FR-002 Read Appointments (list + filters)  
-Endpoint: GET `/api/appointments`  
-Filters: `start_date, end_date, staff_id, contact_id, type_id, search`
+-   `appointment_services`: Quan hệ many-to-many giữa appointments và services
+-   `staff_services`: Quan hệ many-to-many giữa staff và services
 
-```php
-public function index(Request $request): JsonResponse
-{
-    $query = Appointment::with(['services']);
-    if ($request->has('start_date') && $request->has('end_date')) {
-        $startTime = strtotime($request->start_date) * 1000;
-        $endTime = strtotime($request->end_date) * 1000;
-        $query->whereBetween('start_time', [$startTime, $endTime]);
-    }
-    if ($request->has('staff_id')) $query->where('staff_id', $request->staff_id);
-    if ($request->has('contact_id')) $query->where('contact_id', $request->contact_id);
-    if ($request->has('type_id')) $query->where('type_id', $request->type_id);
-    if ($request->has('search')) $query->where('title', 'like', '%'.$request->search.'%');
-    $appointments = $query->orderBy('start_time')->get();
-    return response()->json(AppointmentResource::collection($appointments));
-}
-```
+### 3. API Endpoints
 
-- FR-003 Update Appointment  
-Endpoint: PUT `/api/appointments/{id}`  
-Body: trường cần cập nhật + `service_ids[]` (sync)
+#### 3.1 Appointments Management
 
-```php
-public function update(Request $request, string $id): JsonResponse
-{
-    $appointment = Appointment::findOrFail($id);
-    $appointment->update($request->only(['title','type_id','contact_id','staff_id','start_time','end_time']));
-    if ($request->has('service_ids')) $appointment->services()->sync($request->service_ids);
-    $appointment->load(['services']);
-    return response()->json(new AppointmentResource($appointment));
-}
-```
+##### GET /api/appointments
 
-- FR-004 Delete Appointment  
-Endpoint: DELETE `/api/appointments/{id}` → 204 No Content
+**Mô tả**: Lấy danh sách lịch hẹn với các bộ lọc
+**Query Parameters**:
 
-#### 3.1.2 Appointment Type Management
+-   `start_date`: Lọc từ ngày (format: Y-m-d)
+-   `end_date`: Lọc đến ngày (format: Y-m-d)
+-   `staff_id`: Lọc theo nhân viên
+-   `contact_id`: Lọc theo khách hàng
+-   `type_id`: Lọc theo loại lịch hẹn
+-   `search`: Tìm kiếm theo tiêu đề
 
-- FR-005 Create/Read/Update/Delete (Soft Delete)  
-Endpoints: REST + `DELETE` hoặc `PUT` với `deleted_at` để soft delete
+**Response**: Array of AppointmentResource
 
-```php
-public function update(Request $request, string $id): JsonResponse
-{
-    $appointmentType = AppointmentType::withTrashed()->findOrFail($id);
-    if ($request->has('deleted_at') && $request->deleted_at) {
-        $appointmentType->delete();
-    } else {
-        $appointmentType->update($request->only(['label','color']));
-    }
-    return response()->json(new AppointmentTypeResource($appointmentType));
-}
+##### POST /api/appointments
 
-public function destroy(string $id): JsonResponse
-{
-    $appointmentType = AppointmentType::findOrFail($id);
-    if ($appointmentType->appointments()->count() > 0) {
-        return response()->json(['success'=>false,'message'=>'Cannot delete appointment type with existing appointments'], 422);
-    }
-    $appointmentType->delete();
-    return response()->json([], 204);
-}
-```
+**Mô tả**: Tạo lịch hẹn mới
+**Request Body**:
 
-- FR-006 Restore  
-Endpoint: POST `/api/appointment_types/{id}/restore`
-
-#### 3.1.3 Settings Management
-
-- FR-007 Bulk Update Settings  
-Endpoint: PUT `/api/settings`  
-Body: `{ visibleContacts: string[] }`
-
-```php
-public function bulkUpdate(Request $request): JsonResponse
-{
-    $updated = [];
-    if ($request->has('visibleContacts')) {
-        $row = Setting::where('setting_key','visibleContacts')->first();
-        $payload = json_encode($request->visibleContacts);
-        if ($row) { $row->update(['setting_value'=>$payload]); }
-        else { Setting::create(['setting_key'=>'visibleContacts','setting_value'=>$payload]); }
-        $updated['visibleContacts'] = $request->visibleContacts;
-    }
-    return response()->json($updated);
-}
-```
-
-- FR-008 Get Settings (Key-Value)  
-Endpoint: GET `/api/settings`  
-Trả về object, tự parse JSON strings.
-
-#### 3.1.4 Combined Data Endpoint
-
-- FR-009 Get All Data  
-Endpoint: GET `/api/data`  
-Trả về: appointments, appointment_types, contacts, staff, services, settings.
-
-### 3.2 Non-Functional Requirements
-
-- Performance: < 500ms với queries đã index; eager loading để tránh N+1.  
-- Security: CORS mở cho frontend; mã trạng thái HTTP chính xác; không phơi bày dữ liệu nhạy cảm.  
-- Compatibility: JSON response nhất quán; mapping field phù hợp React (`start`/`end`).
-
----
-
-## 4. Architecture & Components
-
-### 4.1 Routes (`routes/api.php`)
-- `Route::apiResource()` cho CRUD chuẩn.
-- Routes bổ sung: underscore cho React, restore, settings bulk update, combined `/api/data`.
-
-### 4.2 Controllers (tác dụng các hàm chính)
-
-- AppointmentController
-  - `index(Request)`: Lấy danh sách; áp dụng filter từ query string; eager loading `services`; trả về collection resource.
-  - `store(Request)`: Map `start|end` → `start_time|end_time`; tạo ID (Str::random); attach services; trả 201.
-  - `show($id)`: Tải 1 bản ghi + `services`.
-  - `update(Request,$id)`: Cập nhật trường cho phép; `sync` services nếu có.
-  - `destroy($id)`: Xóa bản ghi, trả 204.
-
-- AppointmentTypeController
-  - `index(Request)`: Lọc `include_deleted`, search theo `label`, `withCount('appointments')`.
-  - `store(Request)`: Tạo mới với ID ngẫu nhiên.
-  - `update(Request,$id)`: Hỗ trợ soft delete qua PUT (nếu có `deleted_at`).
-  - `destroy($id)`: Ràng buộc nghiệp vụ: không xóa nếu còn appointments.
-  - `restore($id)`: Khôi phục bản ghi soft-deleted.
-
-- ContactController / ServiceController / StaffController
-  - `index(Request)`: Search theo `name`, kèm `withCount`/`with` cần thiết.
-  - `store/show/update/destroy`: CRUD cơ bản; với Staff/Service xử lý quan hệ many-to-many.
-
-- SettingController
-  - `index(Request)`: Trả về object key-value; tự `json_decode` khi cần.
-  - `store/update/destroy`: CRUD cơ bản.
-  - `getByKey/updateByKey`: Lấy/cập nhật theo `setting_key`.
-  - `bulkUpdate(Request)`: Cập nhật nhiều settings (ví dụ `visibleContacts`).
-
-### 4.3 Models (Eloquent)
-- `Appointment`: `$fillable`, casts, `belongsTo` Contact/Staff/AppointmentType, `belongsToMany` Service.
-- `AppointmentType`: `SoftDeletes`, timestamps=true, `hasMany` Appointment.
-- `Contact`, `Service`, `Staff`, `Setting`: `$fillable` phù hợp; quan hệ 1-n, n-n như thiết kế.
-
-### 4.4 Resources (API Resources)
-- Chuẩn hóa phản hồi JSON, ẩn/hiện trường theo `whenLoaded`, chuyển `start_time|end_time` → `start|end`, thêm `service_ids`.
-
-### 4.5 Middleware (CORS)
-- `CorsMiddleware`: Xử lý preflight OPTIONS; thêm CORS headers cho mọi phản hồi; cấu hình prepend vào nhóm `api` trong `bootstrap/app.php`.
-
----
-
-## 5. Database Design
-
-### 5.1 Entities & Relationships
-- Appointments (N-N với Services, N-1 tới Contact/Staff/AppointmentType)
-- AppointmentTypes (1-N tới Appointments, SoftDeletes)
-- Contacts (1-N Appointments)
-- Staff (1-N Appointments, N-N Services)
-- Services (N-N Appointments, N-N Staff)
-- Settings (key-value)
-
-### 5.2 Indexes đề xuất
-- `appointments(start_time)`, `appointments(end_time)`, `appointments(type_id)`, `appointments(contact_id)`, `appointments(staff_id)`
-- `appointment_types(deleted_at)`
-
----
-
-## 6. API Specifications
-
-### 6.1 Base URLs
-- Dev: `http://127.0.0.1:8000/api`
-- Prod: `https://your-domain.com/api`
-
-### 6.2 Endpoints Summary
-- Appointments: RESTful CRUD
-- Appointment Types: RESTful + `POST /appointment_types/{id}/restore`
-- Contacts/Services/Staff: RESTful CRUD
-- Settings: RESTful + `PUT /settings` (bulk) + key-based get/update
-- Data: `GET /data` (combined)
-
-### 6.3 Response Format (ví dụ)
 ```json
 {
-  "id": "RtKf8pxYPZ",
-  "title": "Consultation Appointment",
-  "type_id": "1",
-  "contact_id": "1",
-  "staff_id": "1",
-  "service_ids": ["1","2"],
-  "start": 1755147900000,
-  "end": 1755149700000
+    "title": "string (required, max:200)",
+    "type_id": "string (optional, exists:appointment_types,id)",
+    "contact_id": "string (optional, exists:contacts,id)",
+    "staff_id": "string (optional, exists:staff,id)",
+    "start": "integer (optional, timestamp)",
+    "end": "integer (optional, timestamp)",
+    "start_time": "integer (optional, timestamp)",
+    "end_time": "integer (optional, timestamp)",
+    "service_ids": "array (optional, array of service IDs)"
 }
 ```
 
-### 6.4 Error Responses (ví dụ)
+**Response**: AppointmentResource (201 Created)
+
+##### GET /api/appointments/{id}
+
+**Mô tả**: Lấy thông tin chi tiết lịch hẹn
+**Response**: AppointmentResource
+
+##### PUT /api/appointments/{id}
+
+**Mô tả**: Cập nhật lịch hẹn
+**Request Body**: Tương tự POST nhưng tất cả fields đều optional
+**Response**: AppointmentResource
+
+##### DELETE /api/appointments/{id}
+
+**Mô tả**: Xóa lịch hẹn
+**Response**: 204 No Content
+
+#### 3.2 Contacts Management
+
+##### GET /api/contacts
+
+**Mô tả**: Lấy danh sách khách hàng (tối đa 5 kết quả)
+**Query Parameters**:
+
+-   `search`: Tìm kiếm theo tên, email, số điện thoại
+
+**Response**: Array of ContactResource
+
+##### GET /api/contacts/paginated
+
+**Mô tả**: Lấy danh sách khách hàng có phân trang (25 kết quả/trang)
+**Query Parameters**:
+
+-   `search`: Tìm kiếm theo tên, email, số điện thoại
+
+**Response**: Paginated ContactResource collection
+
+##### POST /api/contacts
+
+**Mô tả**: Tạo khách hàng mới
+**Request Body**:
+
 ```json
 {
-  "error": "Failed to create appointment",
-  "message": "Database connection error"
+    "first_name": "string (required, max:100)",
+    "last_name": "string (optional, max:100)",
+    "email": "string (optional, max:200, email format)",
+    "phone_number": "string (required, regex: /^\\+?[1-9][0-9]{7,14}$/)",
+    "avatar": "string (optional)"
 }
 ```
 
+**Response**: ContactResource (201 Created)
+
+##### GET /api/contacts/{id}
+
+**Mô tả**: Lấy thông tin chi tiết khách hàng
+**Response**: ContactResource
+
+##### PUT /api/contacts/{id}
+
+**Mô tả**: Cập nhật thông tin khách hàng
+**Request Body**: Tương tự POST nhưng tất cả fields đều optional
+**Response**: ContactResource
+
+##### DELETE /api/contacts/{id}
+
+**Mô tả**: Xóa khách hàng
+**Validation**: Không thể xóa khách hàng có lịch hẹn
+**Response**: 204 No Content hoặc 422 Unprocessable Entity
+
+#### 3.3 Staff Management
+
+##### GET /api/staff
+
+**Mô tả**: Lấy danh sách nhân viên
+**Query Parameters**:
+
+-   `search`: Tìm kiếm theo tên
+
+**Response**: Array of StaffResource
+
+##### POST /api/staff
+
+**Mô tả**: Tạo nhân viên mới
+**Request Body**:
+
+```json
+{
+    "name": "string (required, max:100)",
+    "avatar": "string (optional)",
+    "visible": "integer (optional, 0 or 1, default: 1)",
+    "service_ids": "array (optional, array of service IDs)"
+}
+```
+
+**Response**: StaffResource (201 Created)
+
+##### GET /api/staff/{id}
+
+**Mô tả**: Lấy thông tin chi tiết nhân viên
+**Response**: StaffResource
+
+##### PUT /api/staff/{id}
+
+**Mô tả**: Cập nhật thông tin nhân viên
+**Request Body**: Tương tự POST nhưng tất cả fields đều optional
+**Response**: StaffResource
+
+##### DELETE /api/staff/{id}
+
+**Mô tả**: Xóa nhân viên
+**Validation**: Không thể xóa nhân viên có lịch hẹn
+**Response**: 204 No Content hoặc 422 Unprocessable Entity
+
+#### 3.4 Services Management
+
+##### GET /api/services
+
+**Mô tả**: Lấy danh sách dịch vụ
+**Query Parameters**:
+
+-   `search`: Tìm kiếm theo tên
+
+**Response**: Array of ServiceResource
+
+#### 3.5 Appointment Types Management
+
+##### GET /api/appointment-types hoặc /api/appointment_types
+
+**Mô tả**: Lấy danh sách loại lịch hẹn
+**Query Parameters**:
+
+-   `include_deleted`: Bao gồm các loại đã xóa (boolean)
+-   `search`: Tìm kiếm theo tên
+
+**Response**: Array of AppointmentTypeResource
+
+##### POST /api/appointment-types hoặc /api/appointment_types
+
+**Mô tả**: Tạo loại lịch hẹn mới
+**Request Body**:
+
+```json
+{
+    "label": "string (required)",
+    "color": "string (optional, hex color)"
+}
+```
+
+**Response**: AppointmentTypeResource (201 Created)
+
+##### GET /api/appointment-types/{id} hoặc /api/appointment_types/{id}
+
+**Mô tả**: Lấy thông tin chi tiết loại lịch hẹn
+**Response**: AppointmentTypeResource
+
+##### PUT /api/appointment-types/{id} hoặc /api/appointment_types/{id}
+
+**Mô tả**: Cập nhật loại lịch hẹn
+**Request Body**:
+
+```json
+{
+    "label": "string (optional)",
+    "color": "string (optional, hex color)",
+    "deleted_at": "boolean (optional, true để soft delete)"
+}
+```
+
+**Response**: AppointmentTypeResource
+
+##### DELETE /api/appointment-types/{id} hoặc /api/appointment_types/{id}
+
+**Mô tả**: Soft delete loại lịch hẹn
+**Response**: 204 No Content
+
+##### POST /api/appointment-types/{id}/restore hoặc /api/appointment_types/{id}/restore
+
+**Mô tả**: Khôi phục loại lịch hẹn đã xóa
+**Response**: AppointmentTypeResource
+
+#### 3.6 Settings Management
+
+##### GET /api/settings
+
+**Mô tả**: Lấy cài đặt hệ thống
+**Response**:
+
+```json
+{
+    "visibleStaffs": ["array of visible staff IDs"]
+}
+```
+
+##### PUT /api/settings
+
+**Mô tả**: Cập nhật cài đặt hệ thống
+**Response**:
+
+```json
+{
+    "visibleStaffs": ["array of visible staff IDs"]
+}
+```
+
+### 4. Data Resources
+
+#### 4.1 AppointmentResource
+
+```json
+{
+    "id": "string",
+    "title": "string",
+    "start": "integer (timestamp)",
+    "end": "integer (timestamp)",
+    "appointment_type": {
+        "id": "string",
+        "label": "string",
+        "color": "string"
+    },
+    "contact": {
+        "id": "string",
+        "name": "string (full name)",
+        "avatar": "string"
+    },
+    "staff": {
+        "id": "string",
+        "name": "string",
+        "avatar": "string"
+    },
+    "services": [
+        {
+            "id": "string",
+            "name": "string"
+        }
+    ]
+}
+```
+
+#### 4.2 ContactResource
+
+```json
+{
+    "id": "string",
+    "name": "string (full name for backward compatibility)",
+    "first_name": "string",
+    "last_name": "string",
+    "email": "string",
+    "phone_number": "string",
+    "avatar": "string",
+    "appointments_count": "integer (when loaded)",
+    "appointments": "array of AppointmentResource (when loaded)"
+}
+```
+
+#### 4.3 StaffResource
+
+```json
+{
+    "id": "string",
+    "avatar": "string",
+    "name": "string",
+    "service_ids": "array of service IDs (when loaded)",
+    "visible": "boolean"
+}
+```
+
+#### 4.4 ServiceResource
+
+```json
+{
+    "id": "string",
+    "name": "string",
+    "appointments_count": "integer (when loaded)",
+    "staff_count": "integer (when loaded)",
+    "appointments": "array of AppointmentResource (when loaded)",
+    "staff": "array of StaffResource (when loaded)"
+}
+```
+
+#### 4.5 AppointmentTypeResource
+
+```json
+{
+    "id": "string",
+    "label": "string",
+    "color": "string",
+    "deleted_at": "timestamp or null",
+    "appointments_count": "integer (when loaded)",
+    "appointments": "array of AppointmentResource (when loaded)"
+}
+```
+
+### 5. Business Rules
+
+#### 5.1 Appointments
+
+-   Mỗi lịch hẹn phải có tiêu đề
+-   Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc
+-   Có thể liên kết với nhiều dịch vụ
+-   Có thể có hoặc không có khách hàng, nhân viên, loại lịch hẹn
+
+#### 5.2 Contacts
+
+-   Tên là bắt buộc
+-   Số điện thoại là bắt buộc và phải đúng format
+-   Email phải đúng format nếu có
+-   Không thể xóa khách hàng có lịch hẹn
+
+#### 5.3 Staff
+
+-   Tên là bắt buộc
+-   Có thể liên kết với nhiều dịch vụ
+-   Có thể ẩn/hiện trong lịch
+-   Không thể xóa nhân viên có lịch hẹn
+
+#### 5.4 Appointment Types
+
+-   Sử dụng soft delete
+-   Có thể khôi phục sau khi xóa
+-   Có thể có màu sắc để phân biệt
+
+#### 5.5 Services
+
+-   Chỉ có thể xem danh sách (read-only)
+-   Có thể liên kết với nhiều nhân viên và lịch hẹn
+
+### 6. Error Handling
+
+#### 6.1 HTTP Status Codes
+
+-   `200 OK`: Thành công
+-   `201 Created`: Tạo mới thành công
+-   `204 No Content`: Xóa thành công
+-   `422 Unprocessable Entity`: Lỗi validation
+-   `404 Not Found`: Không tìm thấy resource
+-   `500 Internal Server Error`: Lỗi server
+
+#### 6.2 Error Response Format
+
+```json
+{
+    "message": "Error message",
+    "errors": {
+        "field_name": ["Validation error message"]
+    }
+}
+```
+
+### 7. Security
+
+#### 7.1 Authentication
+
+-   Hệ thống hỗ trợ Laravel Sanctum cho authentication
+-   Có thể bật/tắt authentication cho các endpoints
+
+#### 7.2 Validation
+
+-   Tất cả input đều được validate
+-   Sử dụng Laravel validation rules
+-   Kiểm tra foreign key constraints
+
+### 8. Performance
+
+#### 8.1 Database Optimization
+
+-   Sử dụng indexes cho các trường thường xuyên query
+-   Eager loading để tránh N+1 queries
+-   Soft delete cho appointment types
+
+#### 8.2 API Optimization
+
+-   Pagination cho danh sách contacts
+-   Limit kết quả cho contacts search (5 items)
+-   Resource transformers để tối ưu response size
+
+### 9. Deployment
+
+#### 9.1 Environment Requirements
+
+-   PHP 8.2+
+-   Laravel 11.x
+-   MySQL/PostgreSQL
+-   Composer
+
+#### 9.2 Docker Support
+
+-   Có sẵn Dockerfile và docker-compose.yml
+-   Scripts để build và run với Docker
+
+### 10. API Documentation
+
+#### 10.1 Base URL
+
+-   Development: `http://localhost:8000/api`
+-   Production: `https://your-domain.com/api`
+
+#### 10.2 Content-Type
+
+-   Request: `application/json`
+-   Response: `application/json`
+
+#### 10.3 CORS
+
+-   Hệ thống hỗ trợ CORS cho cross-origin requests
+-   Cấu hình trong `config/cors.php`
+
 ---
 
-## 7. Security
-- CORS: Cho phép `*`, methods: `GET, POST, PUT, DELETE, OPTIONS`, headers chuẩn.
-- Authorization/Authentication: (chưa áp dụng trong phạm vi này; có thể thêm Sanctum/JWT).
-- Business constraints: Không xóa entity khi còn ràng buộc (ví dụ: type có appointments).
-
----
-
-## 8. Performance
-- Eager loading quan hệ để tránh N+1.
-- Indexes trên các cột lọc/sort thường dùng.
-- Combined endpoint `/api/data` giảm số lượng request đầu trang.
-
----
-
-## 9. Testing
-- Feature tests cho CRUD chính, kiểm tra mã trạng thái và cấu trúc JSON.
-- Integration flow: Create → Read → Update → Delete cho mỗi resource.
-
----
-
-## 10. Glossary
-- Eloquent ORM: Lớp ánh xạ đối tượng-quan hệ của Laravel.
-- Resource: Lớp chuyển đổi Model → JSON response.
-- Middleware: Lớp xử lý trước/sau khi vào Controller.
-- Soft Delete: Đánh dấu `deleted_at` thay vì xóa cứng.
-- Eager Loading: Tải quan hệ trước bằng `with()`.
-- CORS: Cơ chế chia sẻ tài nguyên chéo miền.
-
----
-
-## 11. Appendices
-
-### 11.1 Key Implementation Notes
-- ID chuỗi độ dài 10 (`Str::random(10)`) được dùng cho primary keys.
-- Tương thích React: dùng `start/end` ở response; map `start|end` khi nhận request.
-- Routes duplicate dạng underscore (`appointment_types`) cho compatibility.
-
-### 11.2 Future Work
-- Thêm auth (Sanctum/JWT), rate limiting, audit logs.
-- Thêm pagination chuẩn ở các list endpoints.
-- Viết tài liệu OpenAPI/Swagger.
-
-
+**Phiên bản**: 1.0  
+**Ngày cập nhật**: 2025-01-27  
+**Tác giả**: Development Team

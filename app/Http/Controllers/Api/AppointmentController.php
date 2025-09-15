@@ -62,9 +62,9 @@ class AppointmentController extends Controller
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:200'],
-            'type_id' => ['nullable', 'string', 'exists:appointment_types,id'],
-            'contact_id' => ['nullable', 'string', 'exists:contacts,id'],
-            'staff_id' => ['nullable', 'string', 'exists:staff,id'],
+            'type_id' => ['required', 'string', 'exists:appointment_types,id'],
+            'contact_id' => ['required', 'string', 'exists:contacts,id'],
+            'staff_id' => ['required', 'string', 'exists:staff,id'],
             'start' => ['sometimes', 'integer'],
             'end' => ['sometimes', 'integer'],
             'start_time' => ['sometimes', 'integer'],
@@ -126,9 +126,9 @@ class AppointmentController extends Controller
 
         $validated = $request->validate([
             'title' => ['sometimes', 'string', 'max:200'],
-            'type_id' => ['sometimes', 'nullable', 'string', 'exists:appointment_types,id'],
-            'contact_id' => ['sometimes', 'nullable', 'string', 'exists:contacts,id'],
-            'staff_id' => ['sometimes', 'nullable', 'string', 'exists:staff,id'],
+            'type_id' => ['sometimes', 'string', 'exists:appointment_types,id'],
+            'contact_id' => ['sometimes', 'string', 'exists:contacts,id'],
+            'staff_id' => ['sometimes', 'string', 'exists:staff,id'],
             'start' => ['sometimes', 'integer'],
             'end' => ['sometimes', 'integer'],
             'start_time' => ['sometimes', 'integer'],
